@@ -54,6 +54,7 @@ python -m PyInstaller ^
   --windowed ^
   --clean ^
   --noconfirm ^
+  --add-data "i18n;i18n" ^
   "%ENTRY_POINT%"
 
 REM Resultado
