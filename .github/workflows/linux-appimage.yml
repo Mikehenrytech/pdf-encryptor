@@ -38,9 +38,12 @@ jobs:
           pip install pyinstaller
 
       # Recomendación para AppImage: onedir (AppDir)
-      - name: Build (PyInstaller onedir)
+      - name: Build (PyInstaller onedir, no spec)
         run: |
-          pyinstaller --noconfirm --clean --onedir PDF_Cypher.spec
+          pyinstaller --noconfirm --clean --onedir \
+            --name PDF_Cypher \
+            --add-data "i18n: i18n" \
+            src/main.py
 
       - name: Prepare AppDir
         run: |
