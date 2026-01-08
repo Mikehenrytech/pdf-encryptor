@@ -44,6 +44,18 @@ def app_base_dir() -> Path:
         return Path(sys._MEIPASS).resolve()  # type: ignore[attr-defined]
     return Path(__file__).resolve().parent
 
+def language_base_dir(app_base_dir: Path) -> Path:
+    """
+    Returns the base directory where resources live.
+    - Source: directory of this file
+    - PyInstaller: sys._MEIPASS
+    """
+    path_result: Path = app_base_dir
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        path_result = path_result / "i18n"
+        return path_result   # type: ignore[attr-defined]
+    # TODO
+    return path_result / ".." / "i18n"
 
 # ---------------------------
 # Crypto helpers
@@ -122,11 +134,12 @@ class I18N:
     def __init__(self, lang: str = LANG_ES, base_dir: Optional[Path] = None) -> None:
         self.lang = lang
         self.base_dir = base_dir or app_base_dir()
+        self._i18n_dir = language_base_dir(self.base_dir)
         self._cache: Dict[str, Dict[str, str]] = {}
         self._strings = self._load_lang(self.lang)
 
     def _lang_path(self, lang: str) -> Path:
-        return self.base_dir / "i18n" / f"{lang}.json"
+        return self._i18n_dir / f"{lang}.json"
 
     def _load_lang(self, lang: str) -> Dict[str, str]:
         if lang in self._cache:
