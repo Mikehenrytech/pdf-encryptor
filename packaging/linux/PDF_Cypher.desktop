@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=PDF Cypher
+Exec=PDF_Cypher
+Icon=pdf_cypher
+Categories=Utility;
+Terminal=false
