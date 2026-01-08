@@ -6,6 +6,9 @@ It allows users to select a PDF file, define a password (with confirmation), and
 
 ---
 
+![App](/img/pdf_encryptor_app.png)
+
+
 ## ✨ Features
 
 - Simple and clean graphical interface (PySide6 / Qt)
