@@ -1,1 +1,54 @@
-# pdf-encryptor
+# PDF-Cypher
+
+**PDF-Cypher** is a lightweight desktop application for **password-protecting PDF files**, built with **Python** and **PySide6**, and based entirely on **Open Source software**.
+
+It allows users to select a PDF file, define a password (with confirmation), and generate a **new encrypted PDF** compatible with standard PDF viewers such as Adobe Reader.
+
+---
+
+## ✨ Features
+
+- Simple and clean graphical interface (PySide6 / Qt)
+- Password-based PDF encryption
+- **AES-256 encryption** when supported by the installed `pypdf` version
+- Input validation (file, passwords, output path)
+- Windows standalone `.exe` build support
+- 100% Open Source
+
+---
+
+## 🖥️ Requirements
+
+### To run from source
+- Windows 10 / 11
+- Python **3.13+**
+- pip
+
+
+### Python dependencies
+
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+Activate the virtual environment:
+```bash
+.venv\Scripts\activate
+```
+
+Usage
+```bash
+python main.py
+```
+
+Create executable file:
+```bash
+build_exe.bat
+```
+
+## License
+See the LICENSE file.
+
+## Author
+M.E.
