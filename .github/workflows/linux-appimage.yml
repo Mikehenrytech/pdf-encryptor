@@ -93,11 +93,11 @@ jobs:
       - name: Build AppImage (no qt plugin)
         run: |
           set -eux
-          ./linuxdeploy-x86_64.AppImage \
+          ./tools/linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
             --output appimage
-
-          ls -lh ./*.AppImage
+      
+          ls -lh *.AppImage
 
       - name: Package AppImage
         run: |
