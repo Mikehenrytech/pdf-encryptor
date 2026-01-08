@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from pypdf import PdfReader, PdfWriter
 
+VERSION: str ="1.0.0"
 
 def encrypt_writer_compat(writer: PdfWriter, user_password: str, owner_password: str | None) -> None:
     """
