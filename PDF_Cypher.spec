@@ -1,8 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+import os
 
 a = Analysis(
-    ['src\\main.py'],
+    [os.path.join('src', 'main.py')],
     pathex=[],
     binaries=[],
     datas=[('i18n', 'i18n')],
