@@ -1,0 +1,77 @@
+name: Build macOS App (.app) (PyInstaller) and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      # Si NO tienes spec para macOS, este comando es el más estable.
+      # (Si más adelante creas PDF_Cypher_macos.spec, lo adaptamos.)
+      - name: Build .app
+        run: |
+          pyinstaller --noconfirm --clean --windowed \
+            --name PDF_Cypher \
+            --add-data "i18n:i18n" \
+            src/main.py
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          mkdir -p release
+
+          # PyInstaller output can be either:
+          # - dist/PDF_Cypher.app
+          # - dist/PDF_Cypher/PDF_Cypher.app
+          if [[ -d "dist/PDF_Cypher.app" ]]; then
+            APP_PATH="dist/PDF_Cypher.app"
+          elif [[ -d "dist/PDF_Cypher/PDF_Cypher.app" ]]; then
+            APP_PATH="dist/PDF_Cypher/PDF_Cypher.app"
+          else
+            echo "ERROR: PDF_Cypher.app not found. Showing dist/ tree:"
+            ls -la dist || true
+            find dist -maxdepth 4 -type d -name "*.app" -print || true
+            exit 1
+          fi
+
+          # Zip .app (preserving resources)
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "release/PDF_Cypher-macos-arm64.zip"
+
+          ls -lh release
+
+      - name: Upload build artifact (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF_Cypher-macos-arm64
+          path: release/PDF_Cypher-macos-arm64.zip
+
+      - name: Create GitHub Release and upload asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/PDF_Cypher-macos-arm64.zip
