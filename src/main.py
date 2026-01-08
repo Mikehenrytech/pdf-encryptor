@@ -126,7 +126,7 @@ class I18N:
         self._strings = self._load_lang(self.lang)
 
     def _lang_path(self, lang: str) -> Path:
-        return self.base_dir / ".." / "i18n" / f"{lang}.json"
+        return self.base_dir / "i18n" / f"{lang}.json"
 
     def _load_lang(self, lang: str) -> Dict[str, str]:
         if lang in self._cache:
