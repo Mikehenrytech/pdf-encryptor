@@ -1,0 +1,4 @@
+pyside6~=6.10.1
+pypdf~=6.5.0
+cryptography~=46.0.3
+pyinstaller~=6.17.0
