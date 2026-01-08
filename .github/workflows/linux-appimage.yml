@@ -36,8 +36,6 @@ jobs:
             fuse \
             libgl1 \
             libxkbcommon-x11-0 \
-            qt5-qmake \
-            qtbase5-dev \
             libxcb-cursor0 \
             libxcb-icccm4 \
             libxcb-image0 \
@@ -84,34 +82,20 @@ jobs:
           EOF
           chmod +x AppDir/AppRun
 
-      - name: Download linuxdeploy and Qt plugin
+      - name: Download linuxdeploy
         run: |
           set -eux
           curl -L -o linuxdeploy-x86_64.AppImage \
             https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          curl -L -o linuxdeploy-plugin-qt-x86_64.AppImage \
-            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
 
-      - name: Verify qmake
+      - name: Build AppImage (no qt plugin)
         run: |
           set -eux
-          dpkg -l | grep -E "qt5-qmake|qtbase5-dev" || true
-          which qmake
-          ls -la /usr/bin/qmake
-          qmake -v
-
-      - name: Build AppImage
-        env:
-          LINUXDEPLOY_PLUGINS: qt
-          QMAKE: /usr/bin/qmake
-        run: |
-          set -eux
-          export QML_SOURCES_PATHS=""
           ./linuxdeploy-x86_64.AppImage \
             --appdir AppDir \
-            --plugin qt \
             --output appimage
+
           ls -lh ./*.AppImage
 
       - name: Package AppImage
