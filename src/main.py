@@ -22,11 +22,31 @@ from PySide6.QtWidgets import (
 
 from pypdf import PdfReader, PdfWriter
 
-VERSION: str = "1.0.0"
+VERSION: str = "1.0.1"
 
 
 # ---------------------------
-# Crypto helpers (unchanged)
+# PyInstaller-safe resource path
+# ---------------------------
+def resource_base_dir() -> Path:
+    """
+    Project layout:
+      project/
+        src/main.py
+        i18n/en.json
+        i18n/es.json
+
+    - Dev: project/
+    - PyInstaller onefile: sys._MEIPASS
+    """
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS)
+    # __file__ = project/src/main.py → parent = src → parent.parent = project
+    return Path(__file__).resolve().parent.parent
+
+
+# ---------------------------
+# Crypto helpers
 # ---------------------------
 def encrypt_writer_compat(writer: PdfWriter, user_password: str, owner_password: Optional[str]) -> None:
     if not owner_password:
@@ -43,8 +63,6 @@ def encrypt_writer_compat(writer: PdfWriter, user_password: str, owner_password:
     elif "user_pwd" in params:
         kwargs["user_pwd"] = user_password
         kwargs["owner_pwd"] = owner_password
-    else:
-        kwargs = {}
 
     if "algorithm" in params:
         kwargs["algorithm"] = "AES-256"
@@ -88,9 +106,9 @@ class I18N:
     LANG_ES = "es"
     LANG_EN = "en"
 
-    def __init__(self, lang: str = LANG_ES, base_dir: Optional[Path] = None) -> None:
+    def __init__(self, lang: str = LANG_ES) -> None:
         self.lang = lang
-        self.base_dir = base_dir or Path(__file__).resolve().parent
+        self.base_dir = resource_base_dir()
         self._cache: Dict[str, Dict[str, str]] = {}
         self._strings = self._load_lang(self.lang)
 
@@ -101,20 +119,18 @@ class I18N:
         if lang in self._cache:
             return self._cache[lang]
 
-        p = self._lang_path(lang)
-        if not p.exists():
-            raise FileNotFoundError(f"Missing i18n file: {p}")
+        path = self._lang_path(lang)
+        if not path.exists():
+            raise FileNotFoundError(f"Missing i18n file: {path}")
 
-        with p.open("r", encoding="utf-8") as f:
+        with path.open("r", encoding="utf-8") as f:
             data = json.load(f)
 
         if not isinstance(data, dict):
-            raise ValueError(f"Invalid i18n JSON structure in {p} (expected object/dict)")
+            raise ValueError(f"Invalid i18n JSON structure in {path}")
 
-        # Normalize to str:str
-        normalized = {str(k): str(v) for k, v in data.items()}
-        self._cache[lang] = normalized
-        return normalized
+        self._cache[lang] = {str(k): str(v) for k, v in data.items()}
+        return self._cache[lang]
 
     def set_lang(self, lang: str) -> None:
         self.lang = lang
@@ -124,12 +140,10 @@ class I18N:
         self.set_lang(self.LANG_EN if self.lang == self.LANG_ES else self.LANG_ES)
 
     def t(self, key: str) -> str:
-        # fall back to EN then to key
         if key in self._strings:
             return self._strings[key]
         try:
-            en = self._load_lang(self.LANG_EN)
-            return en.get(key, key)
+            return self._load_lang(self.LANG_EN).get(key, key)
         except Exception:
             return key
 
@@ -141,9 +155,9 @@ class PdfEncryptor(QWidget):
     def __init__(self) -> None:
         super().__init__()
 
+        # Spanish by default
         self.i18n = I18N(lang=I18N.LANG_ES)
 
-        # Inputs
         self.input_path_edit = QLineEdit()
         self.input_path_edit.setReadOnly(True)
 
@@ -159,22 +173,18 @@ class PdfEncryptor(QWidget):
         self.owner_pass_edit = QLineEdit()
         self.owner_pass_edit.setEchoMode(QLineEdit.Password)
 
-        # Buttons
         self.btn_browse_in = QPushButton()
         self.btn_browse_out = QPushButton()
         self.btn_encrypt = QPushButton()
         self.btn_encrypt.setDefault(True)
 
-        # Language toggle
         self.btn_lang = QPushButton()
         self.btn_lang.setToolTip("Toggle language / Cambiar idioma")
 
-        # Status
         self.status_label = QLabel("")
         self.status_label.setWordWrap(True)
         self.status_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
-        # Groups & labels (keep refs to re-translate)
         self.files_group = QGroupBox()
         self.pass_group = QGroupBox()
 
@@ -187,6 +197,7 @@ class PdfEncryptor(QWidget):
         self._build_ui()
         self._wire_events()
         self.apply_i18n()
+
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
