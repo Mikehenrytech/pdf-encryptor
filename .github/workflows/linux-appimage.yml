@@ -36,6 +36,8 @@ jobs:
             fuse \
             libgl1 \
             libxkbcommon-x11-0 \
+            qtbase5-dev-tools \
+            qtchooser \
             libxcb-cursor0 \
             libxcb-icccm4 \
             libxcb-image0 \
@@ -54,7 +56,6 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
 
-      # Build with PyInstaller (onedir, NO spec)
       - name: Build application (PyInstaller onedir)
         run: |
           pyinstaller --noconfirm --clean --onedir \
@@ -95,9 +96,16 @@ jobs:
             https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
 
+      - name: Verify qmake
+        run: |
+          set -eux
+          which qmake
+          qmake -v
+
       - name: Build AppImage
         env:
           LINUXDEPLOY_PLUGINS: qt
+          QMAKE: /usr/bin/qmake
         run: |
           set -eux
           export QML_SOURCES_PATHS=""
@@ -106,7 +114,7 @@ jobs:
             --plugin qt \
             --output appimage
 
-          ls -lh *.AppImage
+          ls -lh ./*.AppImage
 
       - name: Package AppImage
         run: |
