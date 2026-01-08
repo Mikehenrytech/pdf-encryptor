@@ -48,5 +48,7 @@
   "owner_placeholder": "(Optional) If empty, the open password will be used",
 
   "err_encrypt_title": "Encryption error",
-  "info_done_title": "Done"
+  "info_done_title": "Done",
+  "err_empty_pass_title": "Password invalid",
+  "err_empty_pass_msg": "Password fields empty"
 }

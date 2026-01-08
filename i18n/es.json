@@ -48,5 +48,7 @@
   "owner_placeholder": "(Opcional) Si lo dejas vacío, se usa la contraseña de apertura",
 
   "err_encrypt_title": "Error al cifrar",
-  "info_done_title": "Listo"
+  "info_done_title": "Listo",
+  "err_empty_pass_title": "Contraseña invalida",
+  "err_empty_pass_msg": "No se ha introducido contraseña"
 }

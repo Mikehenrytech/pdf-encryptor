@@ -5,7 +5,7 @@ import inspect
 from pathlib import Path
 from typing import Dict, Optional, List, Tuple
 
-from PySide6.QtCore import Qt, QThread, Signal, QObject
+from PySide6.QtCore import Qt, QThread, Signal, QObject, QEvent
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
@@ -25,10 +25,9 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QCheckBox,
 )
-
 from pypdf import PdfReader, PdfWriter
 
-VERSION: str = "1.1.0"
+VERSION: str = "1.1.3"
 
 
 # ---------------------------
@@ -44,18 +43,18 @@ def app_base_dir() -> Path:
         return Path(sys._MEIPASS).resolve()  # type: ignore[attr-defined]
     return Path(__file__).resolve().parent
 
+
 def language_base_dir(app_base_dir: Path) -> Path:
     """
-    Returns the base directory where resources live.
-    - Source: directory of this file
-    - PyInstaller: sys._MEIPASS
+    Returns the base directory where i18n resources live.
+    - Source: ../i18n relative to src/main.py
+    - PyInstaller: <_MEIPASS>/i18n
     """
     path_result: Path = app_base_dir
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        path_result = path_result / "i18n"
-        return path_result   # type: ignore[attr-defined]
-    # TODO
-    return path_result / ".." / "i18n"
+        return path_result / "i18n"
+    return (path_result / ".." / "i18n").resolve()
+
 
 # ---------------------------
 # Crypto helpers
@@ -177,6 +176,87 @@ class I18N:
 
 
 # ---------------------------
+# Drag & Drop enabled table
+# ---------------------------
+class PdfDropTable(QTableWidget):
+    """
+    QTableWidget that accepts drag & drop of PDF files only and forwards them
+    to the main window method: add_pdfs_from_paths(list_of_paths).
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+
+    def dragEnterEvent(self, event):
+        if self._event_has_pdf(event):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if self._event_has_pdf(event):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        paths = self._extract_pdf_paths(event)
+        if not paths:
+            event.ignore()
+            return
+
+        # IMPORTANT: do NOT use parent() here; use window() to reach the controller
+        win = self.window()
+        if win is not None and hasattr(win, "add_pdfs_from_paths"):
+            win.add_pdfs_from_paths(paths)  # type: ignore[attr-defined]
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _event_has_pdf(self, event) -> bool:
+        md = event.mimeData()
+        if not md.hasUrls():
+            return False
+
+        for url in md.urls():
+            local = url.toLocalFile()
+            if local and local.lower().endswith(".pdf"):
+                return True
+        return False
+
+    def _extract_pdf_paths(self, event):
+        md = event.mimeData()
+        if not md.hasUrls():
+            return []
+
+        out = []
+        seen = set()
+
+        for url in md.urls():
+            local = url.toLocalFile()
+            # Debug (para usarlo mientras validas)
+            #print("DROP URL:", url.toString(), "local:", local)
+
+            if not local:
+                continue
+            if not local.lower().endswith(".pdf"):
+                continue
+
+            ap = os.path.abspath(local)
+            key = ap.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(ap)
+
+        return out
+
+
+# ---------------------------
 # Worker (thread)
 # ---------------------------
 class BatchEncryptWorker(QObject):
@@ -281,8 +361,9 @@ class PdfEncryptor(QWidget):
         self.btn_lang = QPushButton()
         self.btn_lang.setToolTip("Toggle language / Cambiar idioma")
 
-        # Table
-        self.table = QTableWidget(0, 3)
+        # Table (Drag & Drop enabled)
+        self.table = PdfDropTable(0, 3)
+        #self.table = PdfDropTable(self, self.i18n)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -368,9 +449,9 @@ class PdfEncryptor(QWidget):
 
         # Bottom actions
         action_row = QHBoxLayout()
+        action_row.addStretch(1)
         action_row.addWidget(self.btn_encrypt_all)
         action_row.addWidget(self.btn_cancel)
-        action_row.addStretch(1)
         layout.addLayout(action_row)
 
         layout.addWidget(self.progress)
@@ -484,6 +565,16 @@ class PdfEncryptor(QWidget):
             rows.add(idx.row())
         return sorted(rows, reverse=True)
 
+    def _existing_inputs_abs(self) -> set:
+        existing = set()
+        for r in range(self.table.rowCount()):
+            it = self.table.item(r, self.COL_INPUT)
+            if it:
+                txt = it.text().strip()
+                if txt:
+                    existing.add(os.path.abspath(txt).lower())
+        return existing
+
     # ---- Actions ----
     def add_pdfs(self) -> None:
         t = self.i18n.t
@@ -497,25 +588,42 @@ class PdfEncryptor(QWidget):
         if not paths:
             return
 
+        self.add_pdfs_from_paths(paths)
+
+    def add_pdfs_from_paths(self, paths: List[str]) -> None:
+        """
+        Adds PDFs to the table from a list of filesystem paths.
+        Used by Drag & Drop and can be reused by other inputs.
+        """
+        t = self.i18n.t
+
+        if not paths:
+            return
+
         existing = set()
         for r in range(self.table.rowCount()):
             it = self.table.item(r, self.COL_INPUT)
             if it:
-                existing.add(os.path.abspath(it.text().strip()))
+                existing.add(os.path.abspath(it.text().strip()).lower())
 
         added = 0
         for p in paths:
             if not p:
                 continue
+
             ap = os.path.abspath(p)
-            if ap in existing:
-                continue
+
             if not ap.lower().endswith(".pdf"):
                 continue
             if not os.path.isfile(ap):
                 continue
+
+            key = ap.lower()
+            if key in existing:
+                continue
+
             self._add_row(ap)
-            existing.add(ap)
+            existing.add(key)
             added += 1
 
         if added == 0:
