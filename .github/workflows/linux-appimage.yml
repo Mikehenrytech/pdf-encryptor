@@ -37,7 +37,7 @@ jobs:
             libgl1 \
             libxkbcommon-x11-0 \
             qt5-qmake \
-            qtbase5-dev-tools \
+            qtbase5-dev \
             libxcb-cursor0 \
             libxcb-icccm4 \
             libxcb-image0 \
@@ -71,15 +71,12 @@ jobs:
           mkdir -p AppDir/usr/share/applications
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
 
-          # Copy PyInstaller onedir output
           cp -r "dist/${APP_NAME}/"* AppDir/usr/bin/
 
-          # Desktop entry and icon
           cp packaging/linux/PDF_Cypher.desktop AppDir/usr/share/applications/
           cp packaging/linux/pdf_cypher.png \
             AppDir/usr/share/icons/hicolor/256x256/apps/pdf_cypher.png
 
-          # AppRun
           cat > AppDir/AppRun << 'EOF'
           #!/bin/sh
           HERE="$(dirname "$(readlink -f "$0")")"
@@ -99,13 +96,15 @@ jobs:
       - name: Verify qmake
         run: |
           set -eux
-          which qmake-qt5
-          qmake-qt5 -v
+          dpkg -l | grep -E "qt5-qmake|qtbase5-dev" || true
+          which qmake
+          ls -la /usr/bin/qmake
+          qmake -v
 
       - name: Build AppImage
         env:
           LINUXDEPLOY_PLUGINS: qt
-          QMAKE: /usr/bin/qmake-qt5
+          QMAKE: /usr/bin/qmake
         run: |
           set -eux
           export QML_SOURCES_PATHS=""
@@ -113,7 +112,6 @@ jobs:
             --appdir AppDir \
             --plugin qt \
             --output appimage
-      
           ls -lh ./*.AppImage
 
       - name: Package AppImage
