@@ -1,4 +1,5 @@
 {
+  "app_title": "PDF Cypher",
   "batch_group_files": "Files (batch)",
   "batch_group_options": "Options",
   "btn_add_pdfs": "Add PDFs…",
@@ -36,5 +37,16 @@
   "err_no_valid_tasks_title": "Nothing to process",
   "err_no_valid_tasks_msg": "No valid tasks (check inputs/outputs).",
   "err_encrypt_fatal": "Fatal error during processing.\n\nDetails:\n{error}",
-  "info_done_batch_msg": "Process finished.\n\nOK: {ok}\nSkipped: {skipped}\nErrors: {err}\nCancelled: {cancelled}"
+  "info_done_batch_msg": "Process finished.\n\nOK: {ok}\nSkipped: {skipped}\nErrors: {err}\nCancelled: {cancelled}",
+  "lang_button_to_en": "EN",
+  "lang_button_to_es": "ES",
+
+  "passwords_group": "Passwords",
+  "password_open": "Password (open):",
+  "password_confirm": "Confirm:",
+  "password_owner": "Owner password:",
+  "owner_placeholder": "(Optional) If empty, the open password will be used",
+
+  "err_encrypt_title": "Encryption error",
+  "info_done_title": "Done"
 }

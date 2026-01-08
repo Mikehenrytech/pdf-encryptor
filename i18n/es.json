@@ -1,4 +1,5 @@
 {
+  "app_title": "PDF Cypher",
   "batch_group_files": "Archivos (lote)",
   "batch_group_options": "Opciones",
   "btn_add_pdfs": "Añadir PDFs…",
@@ -36,5 +37,16 @@
   "err_no_valid_tasks_title": "Nada que procesar",
   "err_no_valid_tasks_msg": "No hay tareas válidas (revisa entradas/salidas).",
   "err_encrypt_fatal": "Error fatal durante el proceso.\n\nDetalle:\n{error}",
-  "info_done_batch_msg": "Proceso finalizado.\n\nOK: {ok}\nOmitidos: {skipped}\nErrores: {err}\nCancelados: {cancelled}"
+  "info_done_batch_msg": "Proceso finalizado.\n\nOK: {ok}\nOmitidos: {skipped}\nErrores: {err}\nCancelados: {cancelled}",
+  "lang_button_to_en": "EN",
+  "lang_button_to_es": "ES",
+
+  "passwords_group": "Contraseñas",
+  "password_open": "Contraseña (apertura):",
+  "password_confirm": "Confirmación:",
+  "password_owner": "Contraseña owner:",
+  "owner_placeholder": "(Opcional) Si lo dejas vacío, se usa la contraseña de apertura",
+
+  "err_encrypt_title": "Error al cifrar",
+  "info_done_title": "Listo"
 }
