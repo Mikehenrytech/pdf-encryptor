@@ -36,8 +36,8 @@ jobs:
             fuse \
             libgl1 \
             libxkbcommon-x11-0 \
+            qt5-qmake \
             qtbase5-dev-tools \
-            qtchooser \
             libxcb-cursor0 \
             libxcb-icccm4 \
             libxcb-image0 \
@@ -99,13 +99,13 @@ jobs:
       - name: Verify qmake
         run: |
           set -eux
-          which qmake
-          qmake -v
+          which qmake-qt5
+          qmake-qt5 -v
 
       - name: Build AppImage
         env:
           LINUXDEPLOY_PLUGINS: qt
-          QMAKE: /usr/bin/qmake
+          QMAKE: /usr/bin/qmake-qt5
         run: |
           set -eux
           export QML_SOURCES_PATHS=""
@@ -113,7 +113,7 @@ jobs:
             --appdir AppDir \
             --plugin qt \
             --output appimage
-
+      
           ls -lh ./*.AppImage
 
       - name: Package AppImage
