@@ -2,7 +2,7 @@
 
 **PDF-Cypher** is a lightweight desktop application for **password-protecting PDF files**, built with **Python** and **PySide6**, and based entirely on **Open Source software**.
 
-It allows users to select a PDF file, define a password (with confirmation), and generate a **new encrypted PDF** compatible with standard PDF viewers such as Adobe Reader.
+It allows users to select a PDF file, define a password (with confirmation), and generate a **new encrypted PDF** compatible with standard PDF viewers such as Adobe Reader or Okular.
 
 ---
 
