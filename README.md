@@ -47,9 +47,14 @@ Usage
 python main.py
 ```
 
-Create executable file:
+Create executable file Windows:
 ```bash
 build_exe.bat
+```
+
+Create executable file Linux:
+```bash
+build_linux.bat
 ```
 
 ## License
