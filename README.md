@@ -54,7 +54,7 @@ build_exe.bat
 
 Create executable file Linux:
 ```bash
-build_linux.bat
+build_linux.sh
 ```
 
 ## License
