@@ -1,0 +1,88 @@
+name: Build macOS DMG and Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    name: Build macOS (.app + .dmg) and Release
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build (.app) with PyInstaller
+        run: |
+          set -eux
+          pyinstaller --noconfirm --clean --windowed \
+            --name PDF_Cypher \
+            --add-data "i18n:i18n" \
+            src/main.py
+
+      - name: Package (.app) into zip
+        run: |
+          set -eux
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent "dist/PDF_Cypher.app" "release/PDF_Cypher-macos.app.zip"
+          ls -lh release
+
+      - name: Install create-dmg
+        run: |
+          set -eux
+          node -v
+          npm -v
+          npm install -g create-dmg
+
+      - name: Create DMG
+        run: |
+          set -eux
+          mkdir -p release
+
+          # Crea el DMG en release/
+          create-dmg \
+            --volname "PDF_Cypher" \
+            --window-size 600 400 \
+            --icon-size 128 \
+            --app-drop-link 450 200 \
+            "dist/PDF_Cypher.app" \
+            "release/"
+
+          # Normaliza nombre final
+          DMG_FILE="$(ls -1 release/*.dmg | head -n 1)"
+          mv "$DMG_FILE" "release/PDF_Cypher-macos.dmg"
+          ls -lh release
+
+      - name: Upload build artifact (Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PDF_Cypher-macos
+          path: |
+            release/PDF_Cypher-macos.app.zip
+            release/PDF_Cypher-macos.dmg
+
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/PDF_Cypher-macos.app.zip
+            release/PDF_Cypher-macos.dmg
