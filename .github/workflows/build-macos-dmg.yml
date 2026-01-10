@@ -60,7 +60,7 @@ jobs:
           # Nota: create-dmg en algunas versiones parsea mejor con "=" y coma
           create-dmg \
             --volname="PDF_Cypher" \
-            --window-size=600,400 \
+            --window-size=600x400 \
             --icon-size=128 \
             --app-drop-link=450,200 \
             "dist/PDF_Cypher.app" \
