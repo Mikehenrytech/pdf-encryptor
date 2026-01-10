@@ -58,6 +58,17 @@ Create executable file Linux:
 build_linux.sh
 ```
 
+
+Create executable file Debian:
+```bash
+sudo apt-get update
+
+sudo apt-get install ./PDF_Cypher_1.1.4_amd64.deb
+```
+
+
+
+
 ## License
 
 This project is licensed under the GNU GPL v3.
