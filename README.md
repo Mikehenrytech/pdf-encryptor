@@ -58,6 +58,11 @@ build_linux.sh
 ```
 
 ## License
+
+This project is licensed under the GNU GPL v3.
+The author retains full copyright and may offer
+alternative licensing terms in the future.
+
 See the LICENSE file.
 
 ## Author
