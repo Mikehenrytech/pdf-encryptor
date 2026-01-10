@@ -25,6 +25,7 @@ It allows users to select a PDF file, define a password (with confirmation), and
 ### To run from source
 - Windows 10 / 11
 - Ubuntu +22.04
+- MacOS
 - Linux (AppImage)
 - Python **3.11+**
 - pip
