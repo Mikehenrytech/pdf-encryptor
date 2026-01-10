@@ -45,48 +45,26 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "dist/PDF_Cypher.app" "release/PDF_Cypher-macos.app.zip"
           ls -lh release
 
-      - name: Install create-dmg
+      - name: Create DMG (unsigned) with hdiutil
         run: |
           set -eux
-          node -v
-          npm -v
-          npm install -g create-dmg
+          mkdir -p release dmgroot
 
-      - name: Create DMG (unsigned)
-        run: |
-          set -eux
-          mkdir -p release
+          # Prepara estructura del DMG
+          rm -rf dmgroot/*
+          cp -R "dist/PDF_Cypher.app" dmgroot/
 
-          # Intento 1: --no-sign (versiones nuevas)
-          if create-dmg --help | grep -q -- "--no-sign"; then
-            create-dmg \
-              --no-sign \
-              --volname="PDF_Cypher" \
-              --window-size=600x400 \
-              --icon-size=128 \
-              --app-drop-link=450,200 \
-              "dist/PDF_Cypher.app" \
-              "release/"
-          else
-            # Intento 2: algunos builds usan --skip-sign (menos común)
-            if create-dmg --help | grep -q -- "--skip-sign"; then
-              create-dmg \
-                --skip-sign \
-                --volname="PDF_Cypher" \
-                --window-size=600x400 \
-                --icon-size=128 \
-                --app-drop-link=450,200 \
-                "dist/PDF_Cypher.app" \
-                "release/"
-            else
-              echo "ERROR: create-dmg does not support a no-sign flag in this version."
-              echo "Either pin a newer create-dmg version, or use dmgbuild (Python) instead."
-              exit 1
-            fi
-          fi
+          # (Opcional) Symlink a /Applications para UX drag & drop
+          ln -s /Applications dmgroot/Applications
 
-          DMG_FILE="$(ls -1 release/*.dmg | head -n 1)"
-          mv "$DMG_FILE" "release/PDF_Cypher-macos.dmg"
+          # Crea DMG comprimido (read-only)
+          hdiutil create \
+            -volname "PDF_Cypher" \
+            -srcfolder "dmgroot" \
+            -ov \
+            -format UDZO \
+            "release/PDF_Cypher-macos.dmg"
+
           ls -lh release
 
       - name: Upload build artifact (Actions)
