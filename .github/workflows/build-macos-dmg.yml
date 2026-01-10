@@ -52,21 +52,39 @@ jobs:
           npm -v
           npm install -g create-dmg
 
-      - name: Create DMG
+      - name: Create DMG (unsigned)
         run: |
           set -eux
           mkdir -p release
 
-          # Nota: create-dmg en algunas versiones parsea mejor con "=" y coma
-          create-dmg \
-            --volname="PDF_Cypher" \
-            --window-size=600x400 \
-            --icon-size=128 \
-            --app-drop-link=450,200 \
-            "dist/PDF_Cypher.app" \
-            "release/"
+          # Intento 1: --no-sign (versiones nuevas)
+          if create-dmg --help | grep -q -- "--no-sign"; then
+            create-dmg \
+              --no-sign \
+              --volname="PDF_Cypher" \
+              --window-size=600x400 \
+              --icon-size=128 \
+              --app-drop-link=450,200 \
+              "dist/PDF_Cypher.app" \
+              "release/"
+          else
+            # Intento 2: algunos builds usan --skip-sign (menos común)
+            if create-dmg --help | grep -q -- "--skip-sign"; then
+              create-dmg \
+                --skip-sign \
+                --volname="PDF_Cypher" \
+                --window-size=600x400 \
+                --icon-size=128 \
+                --app-drop-link=450,200 \
+                "dist/PDF_Cypher.app" \
+                "release/"
+            else
+              echo "ERROR: create-dmg does not support a no-sign flag in this version."
+              echo "Either pin a newer create-dmg version, or use dmgbuild (Python) instead."
+              exit 1
+            fi
+          fi
 
-          # Normaliza nombre final (create-dmg suele generar algo tipo "PDF_Cypher 0.0.0.dmg")
           DMG_FILE="$(ls -1 release/*.dmg | head -n 1)"
           mv "$DMG_FILE" "release/PDF_Cypher-macos.dmg"
           ls -lh release
