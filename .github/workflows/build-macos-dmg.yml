@@ -57,16 +57,16 @@ jobs:
           set -eux
           mkdir -p release
 
-          # Crea el DMG en release/
+          # Nota: create-dmg en algunas versiones parsea mejor con "=" y coma
           create-dmg \
-            --volname "PDF_Cypher" \
-            --window-size 600 400 \
-            --icon-size 128 \
-            --app-drop-link 450 200 \
+            --volname="PDF_Cypher" \
+            --window-size=600,400 \
+            --icon-size=128 \
+            --app-drop-link=450,200 \
             "dist/PDF_Cypher.app" \
             "release/"
 
-          # Normaliza nombre final
+          # Normaliza nombre final (create-dmg suele generar algo tipo "PDF_Cypher 0.0.0.dmg")
           DMG_FILE="$(ls -1 release/*.dmg | head -n 1)"
           mv "$DMG_FILE" "release/PDF_Cypher-macos.dmg"
           ls -lh release
