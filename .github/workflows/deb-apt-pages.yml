@@ -23,11 +23,10 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install system deps (PySide6 runtime libs for build + APT tooling)
+      - name: Install system deps (build + APT tooling)
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            dpkg-dev gzip \
+          sudo apt-get install -y dpkg-dev gzip \
             libxkbcommon-x11-0 \
             libxcb-icccm4 \
             libxcb-image0 \
@@ -46,29 +45,28 @@ jobs:
 
       - name: Build binary (PyInstaller)
         run: |
-          # Ajusta si tu nombre real difiere
+          # Ajusta --name si tu binario debe llamarse distinto
           pyinstaller --noconfirm --clean --name pdf-cypher src/main.py
 
       - name: Build .deb
+        shell: bash
         run: |
-          set -eux
+          set -euo pipefail
 
           VERSION="${GITHUB_REF_NAME#v}"
-
-          PKGROOT="pkgroot"
           APPNAME="pdf-cypher"
-          BIN_SRC="dist/${APPNAME}"
-          BIN_DST="${PKGROOT}/usr/bin/${APPNAME}"
 
+          BIN_SRC="dist/${APPNAME}"
           test -f "${BIN_SRC}"
 
+          PKGROOT="pkgroot"
           rm -rf "${PKGROOT}"
           mkdir -p "${PKGROOT}/DEBIAN"
           mkdir -p "${PKGROOT}/usr/bin"
           mkdir -p "${PKGROOT}/usr/share/applications"
           mkdir -p "${PKGROOT}/usr/share/icons/hicolor/256x256/apps"
 
-          install -m 0755 "${BIN_SRC}" "${BIN_DST}"
+          install -m 0755 "${BIN_SRC}" "${PKGROOT}/usr/bin/${APPNAME}"
 
           install -m 0644 packaging/linux/PDF_Cypher.desktop \
             "${PKGROOT}/usr/share/applications/${APPNAME}.desktop"
@@ -76,28 +74,30 @@ jobs:
           install -m 0644 packaging/linux/pdf_cypher.png \
             "${PKGROOT}/usr/share/icons/hicolor/256x256/apps/${APPNAME}.png"
 
-          cat > "${PKGROOT}/DEBIAN/control" <<EOF
-Package: ${APPNAME}
-Version: ${VERSION}
-Section: utils
-Priority: optional
-Architecture: amd64
-Maintainer: Mikehenrytech <noreply@github.com>
-Depends: libc6 (>= 2.35)
-Description: PDF Cypher - Encrypt PDFs in batch (GUI)
-EOF
+          # control sin heredoc
+          {
+            echo "Package: ${APPNAME}"
+            echo "Version: ${VERSION}"
+            echo "Section: utils"
+            echo "Priority: optional"
+            echo "Architecture: amd64"
+            echo "Maintainer: Mikehenrytech <noreply@github.com>"
+            echo "Depends: libc6 (>= 2.35)"
+            echo "Description: PDF Cypher - Encrypt PDFs in batch (GUI)"
+          } > "${PKGROOT}/DEBIAN/control"
 
-          cat > "${PKGROOT}/DEBIAN/postinst" <<'EOF'
-#!/bin/sh
-set -e
-if command -v update-desktop-database >/dev/null 2>&1; then
-  update-desktop-database -q || true
-fi
-if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -q /usr/share/icons/hicolor || true
-fi
-exit 0
-EOF
+          # postinst sin heredoc
+          printf '%s\n' \
+            '#!/bin/sh' \
+            'set -e' \
+            'if command -v update-desktop-database >/dev/null 2>&1; then' \
+            '  update-desktop-database -q || true' \
+            'fi' \
+            'if command -v gtk-update-icon-cache >/dev/null 2>&1; then' \
+            '  gtk-update-icon-cache -q /usr/share/icons/hicolor || true' \
+            'fi' \
+            'exit 0' \
+            > "${PKGROOT}/DEBIAN/postinst"
           chmod 0755 "${PKGROOT}/DEBIAN/postinst"
 
           DEB_NAME="${APPNAME}_${VERSION}_amd64.deb"
@@ -119,13 +119,13 @@ EOF
           path: gh-pages
 
       - name: Publish APT repo into gh-pages
+        shell: bash
         run: |
-          set -eux
+          set -euo pipefail
 
           APPNAME="pdf-cypher"
           VERSION="${GITHUB_REF_NAME#v}"
           DEB="../release/${APPNAME}_${VERSION}_amd64.deb"
-
           test -f "${DEB}"
 
           cd gh-pages
@@ -140,48 +140,39 @@ EOF
           dpkg-scanpackages --multiversion pool /dev/null > dists/stable/main/binary-amd64/Packages
           gzip -fk dists/stable/main/binary-amd64/Packages
 
-          cat > dists/stable/Release <<EOF
-Origin: Mikehenrytech
-Label: PDF Cypher APT Repo
-Suite: stable
-Codename: stable
-Architectures: amd64
-Components: main
-Description: APT repository for PDF Cypher
-EOF
+          # Release base sin heredoc
+          RELEASE_FILE="dists/stable/Release"
+          {
+            echo "Origin: Mikehenrytech"
+            echo "Label: PDF Cypher APT Repo"
+            echo "Suite: stable"
+            echo "Codename: stable"
+            echo "Architectures: amd64"
+            echo "Components: main"
+            echo "Description: APT repository for PDF Cypher"
+          } > "${RELEASE_FILE}"
 
-          # Script para añadir hashes al Release (evita YAML frágil)
-          cat > /tmp/gen_release_hashes.sh <<'EOS'
-#!/usr/bin/env bash
-set -euo pipefail
+          # Añadir hashes (sin heredoc): generamos con bash puro
+          cd dists/stable
 
-cd "dists/stable"
+          echo "MD5Sum:" >> Release
+          while IFS= read -r f; do
+            size="$(stat -c%s "$f")"
+            sum="$(md5sum "$f" | awk '{print $1}')"
+            printf " %s %16d %s\n" "$sum" "$size" "$f" >> Release
+          done < <(find . -type f ! -name Release -printf "%P\n" | sort)
 
-{
-  echo "MD5Sum:"
-  while IFS= read -r -d '' f; do
-    rel="${f#./}"
-    size="$(stat -c%s "$rel")"
-    sum="$(md5sum "$rel" | awk '{print $1}')"
-    printf " %s %16d %s\n" "$sum" "$size" "$rel"
-  done < <(find . -type f ! -name Release -print0)
-
-  echo "SHA256:"
-  while IFS= read -r -d '' f; do
-    rel="${f#./}"
-    size="$(stat -c%s "$rel")"
-    sum="$(sha256sum "$rel" | awk '{print $1}')"
-    printf " %s %16d %s\n" "$sum" "$size" "$rel"
-  done < <(find . -type f ! -name Release -print0)
-} >> Release
-EOS
-
-          chmod +x /tmp/gen_release_hashes.sh
-          /tmp/gen_release_hashes.sh
+          echo "SHA256:" >> Release
+          while IFS= read -r f; do
+            size="$(stat -c%s "$f")"
+            sum="$(sha256sum "$f" | awk '{print $1}')"
+            printf " %s %16d %s\n" "$sum" "$size" "$f" >> Release
+          done < <(find . -type f ! -name Release -printf "%P\n" | sort)
 
       - name: Commit and push gh-pages
+        shell: bash
         run: |
-          set -eux
+          set -euo pipefail
           cd gh-pages
 
           git config user.name "github-actions[bot]"
