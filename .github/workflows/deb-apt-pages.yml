@@ -46,44 +46,36 @@ jobs:
 
       - name: Build binary (PyInstaller)
         run: |
-          # Ajusta si tu spec/nombre difiere. Si usas spec en Linux, usa el spec.
+          # Ajusta si tu nombre real difiere
           pyinstaller --noconfirm --clean --name pdf-cypher src/main.py
 
       - name: Build .deb
         run: |
           set -eux
 
-          # Tag -> versión semver sin "v"
           VERSION="${GITHUB_REF_NAME#v}"
 
-          # Rutas
           PKGROOT="pkgroot"
           APPNAME="pdf-cypher"
           BIN_SRC="dist/${APPNAME}"
           BIN_DST="${PKGROOT}/usr/bin/${APPNAME}"
 
-          # Validación
           test -f "${BIN_SRC}"
 
-          # Estructura de paquete
           rm -rf "${PKGROOT}"
           mkdir -p "${PKGROOT}/DEBIAN"
           mkdir -p "${PKGROOT}/usr/bin"
           mkdir -p "${PKGROOT}/usr/share/applications"
           mkdir -p "${PKGROOT}/usr/share/icons/hicolor/256x256/apps"
 
-          # Binario
           install -m 0755 "${BIN_SRC}" "${BIN_DST}"
 
-          # Desktop entry (ajusta rutas/nombre si difieren)
           install -m 0644 packaging/linux/PDF_Cypher.desktop \
             "${PKGROOT}/usr/share/applications/${APPNAME}.desktop"
 
-          # Icono
           install -m 0644 packaging/linux/pdf_cypher.png \
             "${PKGROOT}/usr/share/icons/hicolor/256x256/apps/${APPNAME}.png"
 
-          # Control file
           cat > "${PKGROOT}/DEBIAN/control" <<EOF
 Package: ${APPNAME}
 Version: ${VERSION}
@@ -91,11 +83,10 @@ Section: utils
 Priority: optional
 Architecture: amd64
 Maintainer: Mikehenrytech <noreply@github.com>
+Depends: libc6 (>= 2.35)
 Description: PDF Cypher - Encrypt PDFs in batch (GUI)
- Depends: libc6 (>= 2.35)
 EOF
 
-          # (Opcional) postinst para update-desktop-database / icon-cache
           cat > "${PKGROOT}/DEBIAN/postinst" <<'EOF'
 #!/bin/sh
 set -e
@@ -109,7 +100,6 @@ exit 0
 EOF
           chmod 0755 "${PKGROOT}/DEBIAN/postinst"
 
-          # Construye el .deb
           DEB_NAME="${APPNAME}_${VERSION}_amd64.deb"
           dpkg-deb --build "${PKGROOT}" "${DEB_NAME}"
 
@@ -122,7 +112,6 @@ EOF
           name: deb-amd64
           path: release/*.deb
 
-      # --- Publicación a GitHub Pages (rama gh-pages) ---
       - name: Checkout gh-pages
         uses: actions/checkout@v4
         with:
@@ -135,24 +124,22 @@ EOF
 
           APPNAME="pdf-cypher"
           VERSION="${GITHUB_REF_NAME#v}"
-          DEB="release/${APPNAME}_${VERSION}_amd64.deb"
+          DEB="../release/${APPNAME}_${VERSION}_amd64.deb"
 
           test -f "${DEB}"
+
           cd gh-pages
 
-          # Layout del repo APT
           mkdir -p apt/pool
           mkdir -p apt/dists/stable/main/binary-amd64
 
-          # Copia .deb al pool (no borramos versiones previas)
-          cp -f "../${DEB}" "apt/pool/"
+          cp -f "${DEB}" "apt/pool/"
 
-          # Genera Packages y Packages.gz
           cd apt
+
           dpkg-scanpackages --multiversion pool /dev/null > dists/stable/main/binary-amd64/Packages
           gzip -fk dists/stable/main/binary-amd64/Packages
 
-          # Genera Release (sin firma, “insecure repo”)
           cat > dists/stable/Release <<EOF
 Origin: Mikehenrytech
 Label: PDF Cypher APT Repo
@@ -163,22 +150,40 @@ Components: main
 Description: APT repository for PDF Cypher
 EOF
 
-          # Añade hashes al Release
-          (cd dists/stable && \
-            echo "MD5Sum:" && \
-            find main -type f ! -name Release -printf "%P\n" | while read -r f; do \
-              printf " %s %16d %s\n" "$(md5sum "$f" | cut -d' ' -f1)" "$(stat -c%s "$f")" "$f"; \
-            done && \
-            echo "SHA256:" && \
-            find main -type f ! -name Release -printf "%P\n" | while read -r f; do \
-              printf " %s %16d %s\n" "$(sha256sum "$f" | cut -d' ' -f1)" "$(stat -c%s "$f")" "$f"; \
-            done \
-          ) >> dists/stable/Release
+          # Script para añadir hashes al Release (evita YAML frágil)
+          cat > /tmp/gen_release_hashes.sh <<'EOS'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "dists/stable"
+
+{
+  echo "MD5Sum:"
+  while IFS= read -r -d '' f; do
+    rel="${f#./}"
+    size="$(stat -c%s "$rel")"
+    sum="$(md5sum "$rel" | awk '{print $1}')"
+    printf " %s %16d %s\n" "$sum" "$size" "$rel"
+  done < <(find . -type f ! -name Release -print0)
+
+  echo "SHA256:"
+  while IFS= read -r -d '' f; do
+    rel="${f#./}"
+    size="$(stat -c%s "$rel")"
+    sum="$(sha256sum "$rel" | awk '{print $1}')"
+    printf " %s %16d %s\n" "$sum" "$size" "$rel"
+  done < <(find . -type f ! -name Release -print0)
+} >> Release
+EOS
+
+          chmod +x /tmp/gen_release_hashes.sh
+          /tmp/gen_release_hashes.sh
 
       - name: Commit and push gh-pages
         run: |
           set -eux
           cd gh-pages
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
