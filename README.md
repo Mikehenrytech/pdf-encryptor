@@ -63,7 +63,7 @@ Create executable file Debian:
 ```bash
 sudo apt-get update
 
-sudo apt-get install ./PDF_Cypher_1.1.5_amd64.deb
+sudo apt-get install ./PDF_Cypher_1.1.6_amd64.deb
 ```
 
 
