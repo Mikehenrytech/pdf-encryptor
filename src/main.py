@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 )
 from pypdf import PdfReader, PdfWriter
 
-VERSION: str = "1.1.5"
+VERSION: str = "1.1.6"
 
 
 # ---------------------------
